@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多音频播放器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: #f5f7fa;
+            margin: 0;
+            padding: 2rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .playlist {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .player-item {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+
+        .player-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .song-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .album-art {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            margin-right: 1rem;
+        }
+
+        .song-info h3 {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .song-info p {
+            margin: 0.3rem 0 0;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .play-btn {
+            background: #3498db;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .play-btn:hover {
+            background: #2980b9;
+        }
+
+        .progress-container {
+            flex: 1;
+            height: 4px;
+            background: #ecf0f1;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .progress {
+            height: 100%;
+            background: #3498db;
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            color: #95a5a6;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .volume-slider {
+            width: 100px;
+            height: 4px;
+            -webkit-appearance: none;
+            background: #ecf0f1;
+            border-radius: 2px;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #3498db;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="playlist">
+        <!-- 播放器项1 -->
+        <div class="player-item" data-src="https://zh-hlj.github.io/NFC_music/users/0-a-admin.wav" 
+             data-title="Summer Vibes" data-artist="Chill Artist">
+            <div class="song-header">
+                <img src="placeholder-album.jpg" class="album-art" alt="专辑封面">
+                <div class="song-info">
+                    <h3>Summer Vibes</h3>
+                    <p>Chill Artist</p>
+                </div>
+            </div>
+            <div class="controls">
+                <button class="play-btn">
+                    <i class="fas fa-play"></i>
+                </button>
+                <div class="progress-container">
+                    <div class="progress"></div>
+                </div>
+            </div>
+            <div class="time-display">
+                <span class="current-time">0:00</span>
+                <span class="duration">0:00</span>
+            </div>
+            <div class="volume-container">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" class="volume-slider" min="0" max="1" step="0.1" value="1">
+            </div>
+        </div>
+
+        <!-- 播放器项2 -->
+        <div class="player-item" data-src="audio2.mp3" 
+             data-title="Mountain Trail" data-artist="Nature Sounds">
+            <!-- 相同结构 -->
+        </div>
+    </div>
+
+    <script>
+        class AudioPlayer {
+            constructor(container) {
+                this.container = container;
+                this.audio = new Audio();
+                this.audio.src = container.dataset.src;
+                
+                // 初始化元素
+                this.playBtn = container.querySelector('.play-btn');
+                this.progress = container.querySelector('.progress');
+                this.progressContainer = container.querySelector('.progress-container');
+                this.currentTimeEl = container.querySelector('.current-time');
+                this.durationEl = container.querySelector('.duration');
+                this.volumeSlider = container.querySelector('.volume-slider');
+                this.albumArt = container.querySelector('.album-art');
+                
+                // 初始化元数据
+                this._updateMetadata();
+                this._bindEvents();
+                this.audio.addEventListener('loadedmetadata', () => {
+                    this.durationEl.textContent = this._formatTime(this.audio.duration);
+                });
+            }
+
+            _updateMetadata() {
+                const title = this.container.querySelector('h3');
+                const artist = this.container.querySelector('p');
+                title.textContent = this.container.dataset.title;
+                artist.textContent = this.container.dataset.artist;
+            }
+
+            _bindEvents() {
+                this.playBtn.addEventListener('click', () => this.togglePlay());
+                this.progressContainer.addEventListener('click', (e) => this._seek(e));
+                this.volumeSlider.addEventListener('input', (e) => {
+                    this.audio.volume = e.target.value;
+                });
+                this.audio.addEventListener('timeupdate', () => this._updateProgress());
+            }
+
+            togglePlay() {
+                if (this.audio.paused) {
+                    this.audio.play();
+                    this.playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                } else {
+                    this.audio.pause();
+                    this.playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                }
+            }
+
+            _seek(e) {
+                const rect = this.progressContainer.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                this.audio.currentTime = pos * this.audio.duration;
+            }
+
+            _formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            _updateProgress() {
+                const progress = (this.audio.currentTime / this.audio.duration) * 100;
+                this.progress.style.width = `${progress}%`;
+                this.currentTimeEl.textContent = this._formatTime(this.audio.currentTime);
+            }
+        }
+
+        // 初始化所有播放器
+        document.querySelectorAll('.player-item').forEach(player => {
+            new AudioPlayer(player);
+        });
+    </script>
+</body>
+</html>
